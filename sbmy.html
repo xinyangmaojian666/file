@@ -1,0 +1,112 @@
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+<div id="app">
+  <fieldset class="mcnxs">
+    <legend>mcnxs</legend>
+    <div>
+      <button @click="play">继续上次{{selectedItem.title}}</button>
+    </div>
+    <section>
+      <span
+        v-for="item in list"
+        :key="item.title"
+        style="cursor: pointer"
+        @click="change(item)"
+      >
+        {{ item.title }}
+      </span>
+    </section>
+
+    <audio ref="audio" controls>
+      <source :src="selectedItem.url" type="audio/mpeg" />
+    </audio>
+  </fieldset>
+</div>
+
+<script>
+  const { createApp, ref, useTemplateRef, onMounted, nextTick, computed } = Vue;
+
+  createApp({
+    setup() {
+      const list = ref([]);
+      const audio = useTemplateRef('audio');
+      const selectedItem = computed(() => {
+        return list.value.find((item) => item.selected) ?? {};
+      });
+
+      // 生成播放列表
+      for (let i = 1; i <= 80; i++) {
+        const title = i.toString().padStart(3, '0');
+        list.value.push({
+          title,
+          url: `https://jasonbai008.github.io/asset3/ming/%E6%98%8E%E6%9C%9D%E9%82%A3%E4%BA%9B%E4%BA%8B%E5%84%BF_${title}.mp3`,
+          selected: false
+        });
+      }
+
+      function change(target) {
+        list.value.forEach((item) => (item.selected = false));
+        target.selected = true;
+        play();
+      }
+
+      async function play() {
+        if (selectedItem.value.url) {
+          // 重新播放
+          audio.value.load();
+          audio.value.play();
+        }
+      }
+
+      onMounted(() => {
+        const selectedItem = JSON.parse(localStorage.getItem('selectedItem'));
+        if (selectedItem) {
+          const target = list.value.find(
+            (item) => item.title === selectedItem.title
+          );
+          target.selected = true;
+        }
+      });
+
+      // 关闭网页时，记录现在的item
+      window.addEventListener('beforeunload', () => {
+        localStorage.setItem(
+          'selectedItem',
+          JSON.stringify(selectedItem.value)
+        );
+      });
+
+      // 定义左箭头事件，将audio快退15秒；右箭头事件，将audio快进15秒
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') {
+          audio.value.currentTime -= 15;
+        } else if (e.key === 'ArrowRight') {
+          audio.value.currentTime += 15;
+        }
+        // 空格键暂停
+        else if (e.key === ' ') {
+          audio.value.paused ? audio.value.play() : audio.value.pause();
+        }
+      });
+
+      return {
+        list,
+        selectedItem,
+        play,
+        change
+      };
+    }
+  }).mount('#app');
+</script>
+<style>
+  .mcnxs {
+    section {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      span:hover {
+        color: red;
+      }
+    }
+  }
+</style>
